@@ -284,6 +284,37 @@
       gap: 12px;
     }
 
+    .subject-card {
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 12px;
+      border: 1px solid #bae6fd;
+      border-radius: var(--radius);
+      background: #f0f9ff;
+    }
+
+    .subject-main {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .subject-label {
+      color: #0369a1;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .subject-value {
+      color: #0f172a;
+      font-size: 16px;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+
     .result-card,
     .template-card {
       border: 1px solid var(--line);
@@ -563,6 +594,10 @@
         flex-direction: column;
       }
 
+      .subject-card {
+        flex-direction: column;
+      }
+
       .toolbar {
         justify-content: flex-start;
       }
@@ -640,6 +675,13 @@
           <div class="template-meta" id="resultMeta"></div>
         </div>
         <div class="panel-body">
+          <div class="subject-card" id="subjectCard" hidden>
+            <div class="subject-main">
+              <div class="subject-label">MAIL 主旨</div>
+              <div class="subject-value" id="mailSubject"></div>
+            </div>
+            <button class="btn primary" id="copySubjectBtn" type="button">複製主旨</button>
+          </div>
           <div class="results" id="results"></div>
         </div>
       </section>
@@ -757,6 +799,22 @@
       }
     ];
 
+    const MAIL_SUBJECTS = {
+      all: "BiuLog 上市合作邀請｜育兒創作者體驗企劃",
+      zh: "BiuLog 上市合作邀請｜育兒創作者體驗企劃",
+      en: "BiuLog Launch Collaboration Invitation | Parenting Creator Experience Plan",
+      ja: "育児記録アプリ「BiuLog」体験コラボのご相談",
+      ko: "육아 기록 앱 「BiuLog」 체험 협업 제안드립니다",
+      th: "BiuLog ขอเชิญร่วมงานทดลองใช้แอปบันทึกการเลี้ยงลูก",
+      vi: "Lời mời trải nghiệm hợp tác ứng dụng ghi chép chăm bé BiuLog",
+      id: "Undangan Kolaborasi Pengalaman Aplikasi Catatan Parenting BiuLog",
+      es: "Invitación de colaboración para probar la app de crianza BiuLog",
+      fr: "Invitation de collaboration pour découvrir l’app de suivi bébé BiuLog",
+      de: "BiuLog Kooperationsanfrage für Parenting-Creator",
+      ar: "دعوة تعاون لتجربة تطبيق تدوين رعاية الطفل BiuLog",
+      ru: "BiuLog: приглашение к сотрудничеству для parenting creator"
+    };
+
     const state = {
       templates: [],
       detectedLanguage: "zh",
@@ -769,6 +827,9 @@
       detectHint: document.querySelector("#detectHint"),
       languageOverride: document.querySelector("#languageOverride"),
       resultMeta: document.querySelector("#resultMeta"),
+      subjectCard: document.querySelector("#subjectCard"),
+      mailSubject: document.querySelector("#mailSubject"),
+      copySubjectBtn: document.querySelector("#copySubjectBtn"),
       results: document.querySelector("#results"),
       copyAllBtn: document.querySelector("#copyAllBtn"),
       syncLinkBtn: document.querySelector("#syncLinkBtn"),
@@ -978,6 +1039,23 @@
       return template.body.replaceAll("{name}", safeName);
     }
 
+    function getMailSubject(name) {
+      const activeLanguage = getEffectiveLanguage();
+      const pattern = MAIL_SUBJECTS[activeLanguage] || MAIL_SUBJECTS.all;
+      return pattern.replaceAll("{name}", name.trim());
+    }
+
+    function renderMailSubject(name, hasName) {
+      if (!hasName) {
+        els.subjectCard.hidden = true;
+        els.mailSubject.textContent = "";
+        return;
+      }
+
+      els.mailSubject.textContent = getMailSubject(name);
+      els.subjectCard.hidden = false;
+    }
+
     function getVisibleTemplates() {
       const activeLanguage = getEffectiveLanguage();
       return state.templates.filter((template) => {
@@ -997,6 +1075,8 @@
       els.detectHint.textContent = activeLanguage === state.detectedLanguage
         ? "依名稱文字判斷；英文名或羅馬拼音可能需要手動指定。"
         : `目前手動指定為${languageLabel(activeLanguage)}。`;
+      renderMailSubject(name, hasName);
+
       if (!hasName) {
         els.resultMeta.innerHTML = `<span class="tag off">待輸入名稱</span>`;
         els.copyAllBtn.disabled = true;
@@ -1245,6 +1325,15 @@
       copyText(text, "全部文案已複製");
     }
 
+    function copyMailSubject() {
+      if (!els.influencerName.value.trim()) {
+        showToast("請先貼上網紅名稱");
+        renderResults();
+        return;
+      }
+      copyText(els.mailSubject.textContent, "MAIL 主旨已複製");
+    }
+
     function bindEvents() {
       els.influencerName.addEventListener("input", renderResults);
       els.languageOverride.addEventListener("change", () => {
@@ -1258,6 +1347,7 @@
         renderResults();
       });
       els.copyAllBtn.addEventListener("click", copyAllResults);
+      els.copySubjectBtn.addEventListener("click", copyMailSubject);
       els.syncLinkBtn.addEventListener("click", copySyncLink);
       els.copySyncCodeBtn.addEventListener("click", copySyncCode);
       els.importSyncCodeBtn.addEventListener("click", importSyncCode);
