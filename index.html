@@ -27,6 +27,10 @@
       box-sizing: border-box;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     html {
       min-height: 100%;
       background: var(--bg);
@@ -188,6 +192,42 @@
     select:focus {
       border-color: var(--teal);
       box-shadow: 0 0 0 3px rgba(15, 118, 110, .14);
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+
+    .input-wrap input {
+      padding-right: 44px;
+    }
+
+    .input-clear {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      min-height: 28px;
+      padding: 0;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+      transform: translateY(-50%);
+      transition: background .16s ease, color .16s ease, transform .16s ease;
+    }
+
+    .input-clear:hover {
+      background: #cbd5e1;
+      color: #0f172a;
+      transform: translateY(-50%) scale(1.04);
+      box-shadow: none;
     }
 
     .hint {
@@ -630,7 +670,10 @@
         <div class="panel-body">
           <div class="field">
             <label for="influencerName">網紅名稱</label>
-            <input id="influencerName" type="text" autocomplete="off" placeholder="例如：嘿嘿、Aiko、민지">
+            <div class="input-wrap">
+              <input id="influencerName" type="text" autocomplete="off" placeholder="例如：嘿嘿、Aiko、민지">
+              <button class="input-clear" id="clearNameInlineBtn" type="button" aria-label="清空網紅名稱" hidden>&times;</button>
+            </div>
             <p class="hint">文案中的 <strong>{name}</strong> 會換成這裡輸入的名稱。</p>
           </div>
 
@@ -652,7 +695,6 @@
           <div class="actions">
             <button class="btn primary copy-all" id="copyAllBtn" type="button">複製全部文案</button>
             <button class="btn" id="syncLinkBtn" type="button">複製同步連結</button>
-            <button class="btn ghost" id="clearNameBtn" type="button">清空名稱</button>
           </div>
 
           <details class="sync-help">
@@ -836,7 +878,7 @@
       syncCodeInput: document.querySelector("#syncCodeInput"),
       copySyncCodeBtn: document.querySelector("#copySyncCodeBtn"),
       importSyncCodeBtn: document.querySelector("#importSyncCodeBtn"),
-      clearNameBtn: document.querySelector("#clearNameBtn"),
+      clearNameInlineBtn: document.querySelector("#clearNameInlineBtn"),
       saveStatus: document.querySelector("#saveStatus"),
       templateForm: document.querySelector("#templateForm"),
       editingId: document.querySelector("#editingId"),
@@ -1056,6 +1098,10 @@
       els.subjectCard.hidden = false;
     }
 
+    function updateClearNameButton(hasName) {
+      els.clearNameInlineBtn.hidden = !hasName;
+    }
+
     function getVisibleTemplates() {
       const activeLanguage = getEffectiveLanguage();
       return state.templates.filter((template) => {
@@ -1071,6 +1117,7 @@
       const activeLanguage = getEffectiveLanguage();
       const activeTemplates = getVisibleTemplates();
 
+      updateClearNameButton(hasName);
       els.detectedLabel.textContent = languageLabel(state.detectedLanguage);
       els.detectHint.textContent = activeLanguage === state.detectedLanguage
         ? "依名稱文字判斷；英文名或羅馬拼音可能需要手動指定。"
@@ -1341,7 +1388,7 @@
         resetForm();
         renderResults();
       });
-      els.clearNameBtn.addEventListener("click", () => {
+      els.clearNameInlineBtn.addEventListener("click", () => {
         els.influencerName.value = "";
         els.influencerName.focus();
         renderResults();
