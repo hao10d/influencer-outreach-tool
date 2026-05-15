@@ -974,7 +974,7 @@
     }
 
     function templateToText(template, name) {
-      const safeName = name.trim() || "嘿嘿";
+      const safeName = name.trim();
       return template.body.replaceAll("{name}", safeName);
     }
 
@@ -988,6 +988,7 @@
 
     function renderResults() {
       const name = els.influencerName.value;
+      const hasName = name.trim().length > 0;
       state.detectedLanguage = detectLanguage(name);
       const activeLanguage = getEffectiveLanguage();
       const activeTemplates = getVisibleTemplates();
@@ -996,13 +997,24 @@
       els.detectHint.textContent = activeLanguage === state.detectedLanguage
         ? "依名稱文字判斷；英文名或羅馬拼音可能需要手動指定。"
         : `目前手動指定為${languageLabel(activeLanguage)}。`;
-      els.resultMeta.innerHTML = `
-        <span class="tag">${languageLabel(activeLanguage)}</span>
-        <span class="tag">${activeTemplates.length} 個文案</span>
-      `;
-      els.copyAllBtn.disabled = activeTemplates.length === 0;
+      if (!hasName) {
+        els.resultMeta.innerHTML = `<span class="tag off">待輸入名稱</span>`;
+        els.copyAllBtn.disabled = true;
+        els.results.innerHTML = `
+          <div class="empty-state">
+            <strong>先貼上網紅名稱</strong>
+            <span>貼上後才會產生文案和複製按鈕，避免誤按。</span>
+          </div>
+        `;
+        return;
+      }
 
       if (activeTemplates.length === 0) {
+        els.resultMeta.innerHTML = `
+          <span class="tag">${languageLabel(activeLanguage)}</span>
+          <span class="tag">0 個文案</span>
+        `;
+        els.copyAllBtn.disabled = true;
         els.results.innerHTML = `
           <div class="empty-state">
             <strong>這個語言目前沒有啟用中的文案</strong>
@@ -1011,6 +1023,12 @@
         `;
         return;
       }
+
+      els.resultMeta.innerHTML = `
+        <span class="tag">${languageLabel(activeLanguage)}</span>
+        <span class="tag">${activeTemplates.length} 個文案</span>
+      `;
+      els.copyAllBtn.disabled = false;
 
       els.results.innerHTML = activeTemplates.map((template) => `
         <article class="result-card">
@@ -1216,6 +1234,11 @@
 
     function copyAllResults() {
       const name = els.influencerName.value;
+      if (!name.trim()) {
+        showToast("請先貼上網紅名稱");
+        renderResults();
+        return;
+      }
       const text = getVisibleTemplates()
         .map((template) => `${template.title}：\n\n${templateToText(template, name)}`)
         .join("\n\n---\n\n");
@@ -1260,6 +1283,11 @@
       els.results.addEventListener("click", (event) => {
         const button = event.target.closest("[data-copy-result]");
         if (!button) return;
+        if (!els.influencerName.value.trim()) {
+          showToast("請先貼上網紅名稱");
+          renderResults();
+          return;
+        }
         const template = state.templates.find((item) => item.id === button.dataset.copyResult);
         if (!template) return;
         copyText(templateToText(template, els.influencerName.value), `已複製「${template.title}」`);
