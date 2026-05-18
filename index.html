@@ -990,26 +990,45 @@
       return new Response(stream).text();
     }
 
-    async function encodePayload(payload) {
+    async function encodePayload(payload, options = {}) {
       const json = JSON.stringify(payload);
-      const compressed = await compressText(json);
-      if (compressed) return `z.${compressed}`;
+      if (!options.raw) {
+        const compressed = await compressText(json);
+        if (compressed) return `z.${compressed}`;
+      }
       const bytes = new TextEncoder().encode(json);
       return `r.${toBase64Url(bytes)}`;
     }
 
     async function decodePayload(value) {
-      if (value.startsWith("z.")) {
-        return JSON.parse(await decompressText(value.slice(2)));
+      const cleanValue = value.trim().replace(/\s+/gu, "");
+      if (cleanValue.startsWith("z.")) {
+        return JSON.parse(await decompressText(cleanValue.slice(2)));
       }
 
-      const rawValue = value.startsWith("r.") ? value.slice(2) : value;
+      const rawValue = cleanValue.startsWith("r.") ? cleanValue.slice(2) : cleanValue;
       const bytes = fromBase64Url(rawValue);
       return JSON.parse(new TextDecoder().decode(bytes));
     }
 
+    function extractSyncValue(value) {
+      const trimmed = value.trim();
+      if (!trimmed) return "";
+
+      try {
+        const url = new URL(trimmed);
+        const params = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
+        return (params.get("sync") || trimmed).replace(/\s+/gu, "");
+      } catch (error) {
+        const marker = "sync=";
+        const markerIndex = trimmed.indexOf(marker);
+        const extracted = markerIndex >= 0 ? trimmed.slice(markerIndex + marker.length) : trimmed;
+        return extracted.replace(/^#/u, "").replace(/\s+/gu, "");
+      }
+    }
+
     async function applySyncValue(syncValue) {
-      const parsed = await decodePayload(syncValue.trim());
+      const parsed = await decodePayload(extractSyncValue(syncValue));
       const nextTemplates = normalizeTemplates(parsed.templates || parsed);
       if (nextTemplates.length === 0) {
         throw new Error("No templates found.");
@@ -1308,8 +1327,8 @@
       copyText(json, "設定 JSON 已複製");
     }
 
-    async function getSyncPayload() {
-      return encodePayload({ templates: state.templates });
+    async function getSyncPayload(options = {}) {
+      return encodePayload({ templates: state.templates }, options);
     }
 
     async function copySyncLink() {
@@ -1319,7 +1338,7 @@
     }
 
     async function copySyncCode() {
-      const payload = await getSyncPayload();
+      const payload = await getSyncPayload({ raw: true });
       els.syncCodeInput.value = payload;
       copyText(payload, "同步碼已複製");
     }
